@@ -1,28 +1,40 @@
-import pandas as pd
+import csv
 
-# Read the CSV file
-df = pd.read_csv('INDP.csv')
+with open('INDP.csv', 'r') as file:
+    reader = csv.DictReader(file)
+    data = [row for row in reader]
 
-# Display all unique subjects
-unique_subjects = df['Subject'].unique()
-print("Unique Subjects:")
-for i, subject in enumerate(unique_subjects, 1):
-    print(f"{i}. {subject}")
+def calculate_difficulty(passing_rate, difficulty):
+    return (passing_rate * 0.5) + (difficulty * 0.5)
 
-# Prompt user to select a subject
-subject_choice = int(input("Choose a subject by number: "))
-chosen_subject = unique_subjects[subject_choice - 1]
+subjects = sorted(set(row['Subject'] for row in data if row['Subject']))
 
-# Filter the DataFrame for the chosen subject
-subject_df = df[df['Subject'] == chosen_subject]
+print("Subjects offered:")
+for i, subject in enumerate(subjects, 1):
+    print(str(i) + ". " + subject)
 
-# Calculate the ranking score
-subject_df['Ranking Score'] = subject_df['pass rate'] * 0.5 + subject_df['difficulty'] * 0.5
+selection = input("Enter the number corresponding to the subject you want to view: ")
 
-# Sort by ranking score in descending order
-sorted_subject_df = subject_df.sort_values(by='Ranking Score', ascending=False)
-
-# Display the classes ranked by the calculated score
-print(f"\nClasses in {chosen_subject} ranked by difficulty and pass rate:")
-for index, row in sorted_subject_df.iterrows():
-    print(f"Class: {row['class']}, Pass Rate: {row['pass rate']}, Difficulty: {row['difficulty']}, Ranking Score: {row['Ranking Score']:.2f}")
+if selection.isdigit() and 1 <= int(selection) <= len(subjects):
+    selected_subject = subjects[int(selection) - 1]
+    
+    classes = [row for row in data if row['Subject'] == selected_subject]
+    for cls in classes:
+        passing_rate = float(cls['Passing Rate'].strip('%'))
+        difficulty = float(cls['Difficulty 1-100'])
+        cls['Calculated Difficulty'] = calculate_difficulty(passing_rate, difficulty)
+    sorted_classes = sorted(classes, key=lambda x: x['Calculated Difficulty'], reverse=True)
+    
+    print("\nClasses for " + selected_subject + " (sorted by easiest to hardest | these are calculated based of pass perctanges and self reported diffulty with 100 meaning easy and 1 difficult ):")
+    for cls in sorted_classes:
+        print(
+            "Class: " + cls['Class'] +
+            ", Subject: " + cls['Subject'] +
+            ", Students Enrolled: " + cls['Number of Students Enrolled'] +
+            ", Passing Rate: " + cls['Passing Rate'] +
+            ", Number of 5's: " + cls["Number of 5's"] +
+            ", Difficulty: " + cls['Difficulty 1-100'] +
+            ", Calculated Difficulty: " + str(cls['Calculated Difficulty'])
+        )
+else:
+    print("Invalid selection. Please run the script again and choose a valid subject number.")
